@@ -1,9 +1,14 @@
 
 use std::io::Write;
+use std::rc::Rc;
+/// use std::rc::Arc; also works - produces an Atomic RC ptr that is safe across threads, but slower.
+/// use std::rc::Weak; also works - used for breaking links in cycles of ref counted ptrs.
 
 fn main() {
     println!("Hello, world!");
-    indexed_content()
+    indexed_content();
+    copy_types();
+    reference_counted_ptrs();
 }
 
 
@@ -64,4 +69,43 @@ fn indexed_content() -> ()
     println!("{:?}, {:?}, {:?}", f2, s2, v2);
     
     
+}
+
+// Copy types
+
+// Structs are not copy by default. You can turn them into a copy type by putting the
+// attribute derive(Copy, Clone) on the type
+#[derive(Copy, Clone)]
+struct Label { number : u32 }
+
+// To illustrate the point, use a function that moves the type (doesn't borrow)
+fn print(l: Label)
+{
+   println!("STAMP: {}", l.number);
+}
+
+fn copy_types() -> ()
+{
+   let l = Label{number : 3};
+   // Note that print would move the contents of l if it weren't a copy type.
+   print(l);
+   // and l would have been unintialised here, but for derive(Copy, Clone)
+   println!("The number is {}", l.number);
+}
+
+// Reference counted ptrs
+
+fn reference_counted_ptrs() -> ()
+{
+   let s = Rc::new("a string slice".to_string());
+   {
+      let t = s.clone(); // points to the same string.
+      // if it had been "let t = s;" then it wouldn't have worked later
+      // when I tried to use s in the println macro.
+      println!("The message is {}", t);
+   } // dropping t here doesn't make s go away
+   println!("I can still print {}", s);
+   
+   // Note that the contents of a reference counted pointer type is IMMUTABLE
+   // and can't be made mutable. Ever.
 }
